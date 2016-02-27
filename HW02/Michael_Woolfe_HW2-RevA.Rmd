@@ -26,7 +26,21 @@ you realize that the chance of red or black are both slightly less than 1/2. The
 Let's make a quick sampling model for this simple version of roulette. You are going to bet a dollar each time you play and always bet on black. Make a box model for this process using the `sample` function. Write a function `get_outcome` that takes as an argument the number of times you play $N$ and returns your earnings $S_N$.
 
 ```{r}
-##Your code here
+## Copying from class example
+get_outcome <- function(N) {
+  #Set the colors that exist on the board
+  color <- rep(c("Black","Red","Green"), c(18,18,2))
+  #Pass the variable N from the function call to the random sampling
+  X <- sample( ifelse( color=="Black", 1,-1),  N, replace = TRUE)
+  S_N <- X
+  return(S_N)
+}
+
+
+sum(get_outcome(155))
+sum(get_outcome(1241455335))
+
+
 ```
 
 ## Problem 1B
@@ -34,7 +48,44 @@ Let's make a quick sampling model for this simple version of roulette. You are g
 Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How do the expected values and standard errors change with $N$? Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
 
 ```{r}
-##Your code here
+## Credit to discussion for assistance: https://canvas.harvard.edu/courses/8329/discussion_topics/99640
+
+##Copying from 1A
+get_outcome <- function(iterations) {
+  #Set the colors that exist on the board
+  color <- rep(c("Black","Red","Green"), c(18,18,2))
+  #Pass the variable N from the function call to the random sampling
+  S_N <- sample( ifelse( color=="Black", 1,-1),  iterations, replace = TRUE)
+  return(S_N)
+}
+
+#Create array with necessary simultations
+N <- c(10, 25, 100, 1000)
+B <- 10^5
+
+# get_outcome(N) ##To test N functionality being passed to the `get_outcome` function
+
+# Run a Monte Carlo simulation for each iteration count using the `replicate` function
+S_N1 <- replicate(B, {SN <- get_outcome(N[1])})
+S_N2 <- replicate(B, {SN <- get_outcome(N[2])})
+S_N3 <- replicate(B, {SN <- get_outcome(N[3])})
+S_N4 <- replicate(B, {SN <- get_outcome(N[4])})
+
+#Determine the average|mean winning from the multiple iterations; this is also the Expected Value for each simulation
+mean(S_N1) #N = 10
+mean(S_N2) #N = 25
+mean(S_N3) #N = 100
+mean(S_N4) #N = 1000
+
+#Find the standard deviation for each attempt      
+sd(S_N1)
+sd(S_N2)
+sd(S_N3)
+sd(S_N4)
+
+
+#Calculate the average winning across the various simulations
+sum(S_N1, S_N2, S_N3, S_N4)/sum(N)
 ```
 
 Your answer here.

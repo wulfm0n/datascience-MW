@@ -112,6 +112,8 @@ Use CLT to approximate the probability that the casino loses money when you play
 In general, what is the probability that the casino loses money as a function of $N$? Make a plot for values ranging from 25 to 1,000. Why does the casino give you free drinks if you keep playing?
 
 ```{r}
+
+
 ##Your code here
 ```
 

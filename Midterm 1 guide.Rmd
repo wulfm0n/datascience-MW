@@ -1,0 +1,249 @@
+---
+title: "Midterm 1 guide"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,include=FALSE}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+theme_set(theme_bw()) ##optional
+
+t1 <-read_csv("http://spreadsheets.google.com/pub?key=0ArfEDsV3bBwCcGhBd2NOQVZ1eWowNVpSNjl1c3lRSWc&output=csv")
+t2 <- read_csv("http://spreadsheets.google.com/pub?key=phAwcNAVuyj2tPLxKvvnNPA&output=csv")
+t3 <- read_csv("http://spreadsheets.google.com/pub?key=phAwcNAVuyj0TAlJeCEzcGQ&output=csv")
+t4 <- read_csv("http://spreadsheets.google.com/pub?key=phAwcNAVuyj0XOoBL_n5tAQ&output=csv")
+t5 <- read_csv("http://spreadsheets.google.com/pub?key=pyj6tScZqmEfI4sLVvEQtHw&output=csv")
+### To keep track of what these are we will define a vector of values
+value_names <- c("child_mortality","life_expectancy","fertility","population","gdp")
+```
+## Problem 3.1 
+
+Use `ggplot2` to create a plot of life expectancy versus fertility for 1962 for Africa, Asia, Europe, and the Americas. Use color to denote continent and point size to denote population size:
+
+```{r}
+p <- ggplot( filter(dat, year==1962 & continent != "Oceania"), aes(x=fertility, y=life_expectancy))
+p + geom_point( aes( color=continent, size=population))
+```
+
+## Problem 1.6
+
+Add a column to the consolidated table containing the continent for each country. Hint: We have created a file that maps countries to continents [here](https://github.com/datasciencelabs/data/blob/master/homework_data/continent-info.tsv). Hint: Learn to use the `left_join` function.
+
+```{r}
+map <- read_delim("https://raw.githubusercontent.com/datasciencelabs/data/master/homework_data/continent-info.tsv",col_names=c("country","continent"),delim ="\t")
+dat <- left_join(dat, map, continent = continents)
+```
+
+## Problem 1B
+
+Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How does the expected values and standard errors change with $N$. Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
+
+```{r}
+mysd <- function(x){
+  sqrt(mean((x-mean(x))^2))
+}
+B <- 10^4
+par(mfrow=c(2,2)) ##don't worry if you don't know what this is. You can remove it.
+for(N in c(10, 25, 100, 1000)){
+  winnings <- replicate(B,get_outcome(N) )
+  z <- (winnings - mean(winnings))/mysd(winnings)
+  qqnorm(z)
+  abline(0,1)
+  cat("Expected value:", mean(winnings), 
+      "Standard Error:", mysd(winnings),"\n")
+}
+```
+
+```{r}
+par(mfrow=c(2,2)) ##don't worry if you don't know what this is. You can remove it.
+## Try out a few N
+for(N in c(10, 25, 100, 1000)){
+  ## copy code from above:
+  average_winnings <- replicate(B,get_outcome(N) ) / N
+  z <- (average_winnings - mean(average_winnings))/mysd(average_winnings)
+  qqnorm(z)
+  abline(0,1)
+  cat("Expected value:", mean(average_winnings), 
+      "Standard Error:", mysd(average_winnings),"\n")
+}
+```
+
+Answer: 
+These are predicted with the central limit theorem that tells us $S_N$ is approximately normal with expected value $\mu N$ and standard error $\sigma \sqrt{N}$. The average is approximated by the normal as well with expected value $\mu$ and standard error $\sigma / \sqrt{N}$. The SE average get's smaller and smaller with $N$.
+
+
+#### Assessment 
+Use the Central Limit Theorem to construct 
+a confidence interval for $\hat{\theta}$ using the empirical
+approach to estimate the standard deviation $\sigma$. 
+
+```{r}
+##Your code here
+
+tabEst$theta_hat + 
+    c(-1,1) * (tabEst$sigma_hat / sqrt(tabEst$tot_poll)) * qnorm(0.975)
+```
+
+
+Even if we didn’t know these data came from individual polls we can still see that our model works rather well. Here is a confidence interval build with just the data, not using sampling theory for the polls:
+
+theta_hat <- mean(Y)
+s <- sd(Y)
+## confidence interval:
+  theta_hat + c(-1,1)*qnorm(0.975)*s/sqrt(length(Y))
+## [1] 0.5074660 0.5347118
+
+
+## Other supporting functions in tidyr
+
+* `separate()` = separate one column into multiple columns
+* `unite()` = unite multiple columns into one
+
+```{r}
+dem_polls_separate <- dem_polls %>% 
+                        separate(col = `End Date`, into = c("y", "m", "d"))
+dem_polls_separate
+```
+
+## Problem 1F
+
+In our `results` table, we have one row for each candidate in each poll. 
+Transform the `results` table to have one row for each poll and columns 
+for each Rubio and Trump. Next, create a column called `diff` with the 
+difference between Trump and Rubio. Hint: Remove the `first_name` and 
+`last_name` columns then use the `tidyr` function `spread()`.
+
+
+```{r}
+##Remove the first_name and last_name columns
+  results <- subset(results, select = -c(first_name, last_name))
+  # head(results01, 10)
+##Credit : http://stackoverflow.com/questions/6286313/remove-an-entire-column-from-a-data-frame-in-r
+
+## 
+# Now take the long-formatted data frame and convert into a wide format.
+#  Credit: http://stackoverflow.com/questions/26221752/how-spread-in-tidyr-handles-factor-levels
+  library(tidyr)
+  results <- spread(results, choice, value)
+# Create the 'diff' column
+  results["diff"] <- results$Trump - results$Rubio
+
+```
+
+
+
+cars2 <- read.csv("https://raw.githubusercontent.com/datasciencelabs/data/master/data.csv")
+filter(cars2, am ==0)
+> cars2.auto <- filter(cars2, am == 0)
+> mean(cars2.auto$mpg)
+[1] 17.14737
+
+
+> q4 <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/midterm_data.csv")
+> head(q4, 10)
+> p <- ggplot( filter(q4, date > "2015-08-22"), aes(x=x, y=y))
+> p + geom_point()
+
+
+x <- c(5,5,8,9,10,10,11,11,11,12,12,13,14,14,14,14,15,15,16,16,17,17,19,20,21)
+X <- sample(x, 5, replace=TRUE)
+M <- median(X)
+
+
+```{r}
+mysd <- function(x){
+  sqrt(mean((x-mean(x))^2))
+}
+B <- 10000
+
+#for(N in c(10, 25, 100, 1000)){
+  
+  winnings <- replicate(B, sample(x, 5, replace=TRUE)   )
+  z <- (winnings - mean(winnings))/mysd(winnings)
+  qqnorm(z)
+  abline(0,1)
+  cat("Expected value:", mean(winnings), 
+      "Standard Error:", mysd(winnings),"\n")
+#}
+```
+
+
+
+Q6
+library(readr)
+master <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/Master.csv")
+player_info <- master %>% select(playerID, nameFirst, nameLast, birthYear, height)
+
+born_1980 <- filter(player_info, player_info$birthYear >= "1980")
+mean(born_1980$height)
+[1] 73.72215
+
+Q7
+ Y <- sample_n(born_1980, 100, replace = FALSE)
+ Y
+ head(born_1980, 30)
+ nrow(born_1980)
+
+theta_hat <- mean(Y$height)
+s <- sd(Y$height)
+mysd(Y$height)
+## confidence interval:
+  theta_hat + c(-1,1)*qnorm(0.95)*s/sqrt(length(Y))
+    mean(Y)
+[1] 72.13237 75.36763
+
+
+Q8
+salaries <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/Salaries.csv")
+View(salaries)
+> filter(salaries, playerID == "barkele01")
+
+
+Q9
+
+
+
+Many other examples can be constructed. For example to model our winning after betting $1 on red (on a roulette wheel) 10 times we can use:
+
+```{r}
+color <- rep(c("Black","Red","Green"), c(18,18,2))
+X <- sample( ifelse( color=="Red", 1,-1),  10, replace = TRUE)
+sum(X)
+```
+
+
+```{r}
+X <- sample( c(1,2,-1), 100, replace = TRUE, prob=c(1/2, 1/4, 1/4))
+sum(X)
+
+100*(sum(1,2,-1)/3)
+```
+
+Q10
+
+ny_airquality <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/ny_airquality.csv")
+
+ny_air <- separate(ny_airquality, col = `Date`, into = c("year", "month", "day"))
+?summarize
+
+View(group_by(filter(ny_air, Temp > 80), month))
+?head
+
+Q11
+
+master <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/Master.csv")
+player_info <- master %>% select(playerID, nameFirst, nameLast, birthYear, height)
+salaries <- read_csv("https://raw.githubusercontent.com/datasciencelabs/data/master/Salaries.csv")
+
+
+
+
+
+
+ 

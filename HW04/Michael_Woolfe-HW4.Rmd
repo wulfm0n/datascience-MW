@@ -34,7 +34,30 @@ Use the data in the `Team` table to explore the relationship between stolen base
 
 
 ```{r}
-## put your code here
+## Relationship between stolen bases [SB] and runs per game [R]
+library(gridExtra)
+
+tab <- Teams %>% filter(yearID == 1999 ) %>%
+  mutate(R_per_game = R / G, SB_per_game = SB / G)
+
+tab %>% ggplot(aes(SB_per_game, R_per_game)) + geom_point()
+ 
+#  + geom_abline(intercept = 0, slope = r , col="blue")
+
+##Fit a regression line
+
+r <- cor(tab$R_per_game, tab$SB_per_game) #Find the slope
+mu_y <- mean(tab$R_per_game) # Find the Y intercept, on non-standardized data
+
+tab %>% ggplot(aes(SB_per_game, R_per_game)) + geom_point() + 
+    geom_abline(intercept = mu_y, slope = r , col="blue")
+
+
+## Report coefficients
+fit_1A <- tab %>% lm(SB_per_game ~ R_per_game, data=.)
+fit_1A$coefficients
+summary(fit_1A)
+
 ```
 
 ## Problem 1B
@@ -46,14 +69,37 @@ To examine the variability of this random variable we will consider each year to
 Using this approach what is your estimate of the random variable's standard error? Is the distribution of the random variable well approximated by a normal distribution? If so, use this to provide a 95% confidence interval for our effect of stolen bases on runs per game. Do you think stolen bases help score runs?
 
 ```{r}
-## put your code here
+## 
+
+res_1B <- Teams %>% filter(yearID >= 1961) %>%
+  mutate(R_per_game = R / G, SB_per_game = SB / G) %>%
+  group_by(yearID) %>%
+  do(tidy(lm(SB_per_game ~ R_per_game, data = .))) 
+      #%>%  filter(term == "HR")
+
+###Data looks approximately normal 
+hist(res_1B$estimate)
+qqnorm(res_1B$estimate)
+qqline(res_1B$estimate)
+###The SE is:
+sd(res_1B$estimate)
+##So the CI is
+mean(res_1B$estimate) + c(-1,1)*qnorm(0.95)*sd(res_1B$estimate)
+
+##according to the QQ Plot stealing bases does not result in making runs
 ```
 
 ## Problem 1C
 Even if we didn't have several years to examine the distribution of our estimate, there is a version of CLT that applies to regression. It turns out that with a large enough sample size, in this case the number of teams, we can construct a confidence interval. Use the function `tidy` to report a confidence interval for the effect of SB on runs based exclusively on the 1999 data. What are your thoughts now on the effectiveness of recruiting players that can steal bases?
 
 ```{r}
-## put your code here
+res_1C <- Teams %>% filter(yearID == 1999) %>%
+  mutate(R_per_game = R / G, SB_per_game = SB / G) %>%
+  lm(SB_per_game ~ R_per_game, data =.)
+
+summary(res_1C)
+tidy(res_1C, conf.int = TRUE)
+## Based on the CI (-0.08, 0.24) it seems the recruiting is ineffective, since zero is in the confidence interval.
 ```
 
 ## Problem 1D
@@ -61,7 +107,13 @@ Even if we didn't have several years to examine the distribution of our estimate
 Back in 2002, bases on balls (BB) did not receive as much attention as other statistics. Repeat the above analysis we performed for SB for BB per game. Do BB have larger effect on runs than SB?
 
 ```{r}
-## put your code here
+res_1D <- Teams %>% filter(yearID == 2002) %>%
+  mutate(R_per_game = R / G, BB_per_game = BB / G) %>%
+  lm(BB_per_game ~ R_per_game, data =.)
+
+summary(res_1D)
+tidy(res_1D, conf.int = TRUE)
+## The CI (0.09, 0.71) shows a positive indicator of BB to Runs scored in a game, since zero is not in the interval
 ```
 
 
@@ -85,6 +137,13 @@ Group data by the number of HRs and perform a regression analysis in each stratu
 
 ```{r}
 ## put your code here
+
+plot_1E <- Batting %>% filter(yearID >= 1961) %>% mutate(HR_group = cut(HR, unique(quantile(HR, prob = seq(0,1,.05), na.rm = TRUE)),include.lowest=FALSE), BB_per_game = BB / G) %>%
+  group_by(HR_group) 
+
+plot_1E %>%
+  ggplot(aes(HR_group, BB_per_game)) +
+    geom_boxplot()
 ```
 
 ## Problem 1F
@@ -121,7 +180,24 @@ Note that the summary shows a very strong HR effect but also a decent BB effect.
 What does the model say about which of these characteristics should receive more weight. Fit the model to each year independently to check for consistency from year to year. 
 
 ```{r}
-## put your code here
+## put your code here 
+
+fit_1F <- Teams %>%
+  filter(yearID >= 1961) %>% 
+  mutate(R = R / G, BB = BB / G,
+Singles = (H - X2B - X3B - HR) / G,
+XB = (X2B + X3B) / G, HR = HR / G) %>%
+  group_by(yearID) %>%
+    do(mod = lm(R ~ BB + Singles + XB + HR, data = .))
+
+#fit_1F$mod
+
+fit_1F$yearID[1966]
+summary(fit_1F$yearID[1966])
+#summary(fit_1F$mod)
+
+## I am not sure how to get a summarized result of the various Coefficients and p-values to determine which covariant is more valuable in this analysis
+
 ```
 
 
@@ -144,7 +220,13 @@ my_salaries <- Salaries %>%
 Use the `mySalaries` data to compute each team's payroll, in millions of dollars, for each team during each year. Save this into an object called `payroll`. Hints: Group by team and year and then sum all salaries. As a sanity check make a plot of payroll against year with color representing teams. Payroll should be increasing with the New York Yankees (code NYA) having the largest payroll. Consider plotting salaries in the log-scale.
 
 ```{r}
-## your code here
+library(ggplot2)
+payroll <- my_salaries %>% group_by(teamID, yearID) %>% summarize(sum(salary))
+
+ payroll %>% ggplot(aes(yearID, log(payroll$`sum(salary)`)), color = factor(payroll$teamID)) +
+  geom_point() ## Sadly, could not get the colors to show correctly.
+
+#Credit for assistance: http://stackoverflow.com/questions/1660124/how-to-sum-a-variable-by-group
 ```
 
 
@@ -153,7 +235,8 @@ Use the `mySalaries` data to compute each team's payroll, in millions of dollars
 Now add the team's winning percentage, wins / (wins + losses) for each year to the `payroll` table. Hints: The `Teams` table has wins and losses for each team for each year. The `dplyr`  `join` functions permit you to join by two columns. 
 
 ```{r}
-## your code here
+payroll <- left_join(payroll, Teams[ , c("teamID", "yearID", "W","L")], by = c("teamID", "yearID"), all.x=T)
+payroll <- payroll %>% mutate(win_percent = W / (W + L))
 ```
 
 
@@ -163,6 +246,11 @@ Explore the relationship between payroll and winning percentage. Use data visual
 
 ```{r}
 ## your code here
+payroll_2C <- payroll %>% filter(yearID %in% 2001:2010)
+r_2C <- cor(payroll_2C$`sum(salary)`, payroll_2C$win_percent) #Find the slope
+mu_y_2C <- mean(payroll_2C$win_percent) # Find the Y intercept, on non-standardized data
+
+payroll_2C %>% ggplot(aes(`sum(salary)`, win_percent)) + geom_point() + geom_abline(intercept = mu_y_2C, slope = r_2C , col="black")
 ```
 
 
@@ -172,6 +260,19 @@ Use the `lm` function to fit a linear model to the 1999 data. Use the log-transf
 
 ```{r}
 ## put your code here
+library("broom")
+
+fit_2D <- payroll_2C %>%
+  filter(yearID >= 1999) %>%
+  lm(W ~ log(`sum(salary)`), data = ., ) %>% tidy(conf.int = TRUE)
+summary(fit_2D)
+##According to this data, the team wins around 11 more games each time their budget doubles.
+
+##Printing the Low and High Confidence Interval
+fit_2D$conf.low[2] ## Confidence Interval low
+fit_2D$conf.high[2] ## Confidence Interval high
+
+
 ```
 
 ## Problem 2E 
@@ -181,7 +282,30 @@ Did the Oakland A's outperform during the Money Ball era? Notice that after Oakl
 Fit a linear model to the wins versus standardized data for each year. Then plot the residuals for Oakland. Make the same plot for the Boston Red Sox. (Hint: use the `augment` function from broom on each linear fit object to extract the residuals- look at the documentation for `augment.lm`). What do year do you think Oakland started using data science and when did other teams catch up? 
 
 ```{r}
-## your code here
+##Per Subramanian, not applying a standardization
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+
+OAK_2E <- payroll %>% filter(teamID == "OAK") %>%
+  lm(W ~ yearID, data=.)
+BOS_2E <- payroll %>% filter(teamID == "BOS") %>%
+  lm(W ~ yearID, data=.)
+
+
+OAK_augment <- payroll %>% filter(teamID == "OAK") %>%
+  augment(OAK_2E, data=.)
+OAK_plot <- ggplot(OAK_augment, aes(yearID, OAK_augment$.std.resid)) + geom_point() + geom_line(size=1) + geom_hline(size=0.25,aes(yintercept=0))
+
+BOS_augment <- payroll %>% filter(teamID == "BOS") %>%
+  augment(BOS_2E, data=.)
+BOS_plot <- ggplot(BOS_augment, aes(yearID, BOS_augment$.std.resid)) + geom_point() + geom_line(size=1) + geom_hline(size=0.25,aes(yintercept=0))
+
+grid.arrange(BOS_plot, OAK_plot)
+
+##Based on this information, the rest of the teams caught up in 1992, given the negative residual in 1992.
+
 ```
 
 ## Problem 2F
@@ -189,7 +313,16 @@ Fit a linear model to the wins versus standardized data for each year. Then plot
 Since 2000 which team has performed the best over what was expected given their payroll?
 
 ```{r}
-## your code here
+library(dplyr)
+
+Teams %>% filter(yearID >=2002 ) %>% 
+  mutate(BB_G=BB/G) %>% group_by(teamID, yearID) %>%
+  arrange(desc(BB_G)) %>% select(teamID,name, BB_G, W)
+## This says that Anaheim Angels did the best Base on Balls per game from 2002:2004
+
+#Teams %>% filter(yearID ==2002 ) %>% 
+#  mutate(BBstd=BB/G) %>%
+#  arrange(desc(BBstd)) %>% select(teamID, BBstd, W)
 ```
 
 ## Problem 2G
@@ -197,7 +330,16 @@ Since 2000 which team has performed the best over what was expected given their 
 For each of the BB, singles, extra bases, home runs and stolen bases per game how did Oakland rank in 2002?
 
 ```{r}
-## your code here
+##Rank in Base on Balls
+Teams %>% filter(yearID ==2002 ) %>% mutate(BB_G=BB/G) %>% arrange(desc(BB_G)) %>% select(teamID, BB_G, W)
+##Rank on Singles
+Teams %>% filter(yearID ==2002 ) %>% mutate(PA = AB + BB, Singles = sum(H - X2B - X3B - HR) / sum(PA)) %>% arrange(desc(Singles)) %>% select(teamID, name, Singles)
+##Rank on extra bases
+Teams %>% filter(yearID ==2002 ) %>% mutate(PA = AB + BB, XB = sum(X2B + X3B) / sum(PA)) %>% arrange(desc(XB)) %>% select(teamID, name, XB)
+##Rank on Home Runs
+Teams %>% filter(yearID ==2002 ) %>% mutate(HR_G=HR/G) %>% arrange(desc(HR_G)) %>% select(teamID, name, HR_G)
+##Rank on stolen bases
+Teams %>% filter(yearID ==2002 ) %>% mutate(SB_G=SB/G) %>% arrange(desc(SB_G)) %>% select(teamID, name, SB_G)
 ```
 
 # Problem 3 (Bonus)
